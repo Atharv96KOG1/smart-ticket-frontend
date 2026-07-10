@@ -1,0 +1,23 @@
+{
+  "name": "smart-ticket-frontend",
+  "version": "1.0.0",
+  "description": "Static single-page UI (TypeScript, no bundler) for the Smart Ticket Router API. Submit a raw support message and see its routing decision — category, priority, assigned team, reasoning, other issues, and confidence.",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "serve": "python3 -m http.server 5173"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Atharv96KOG1/smart-ticket-frontend.git"
+  },
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Atharv96KOG1/smart-ticket-frontend/issues"
+  },
+  "homepage": "https://github.com/Atharv96KOG1/smart-ticket-frontend#readme",
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}

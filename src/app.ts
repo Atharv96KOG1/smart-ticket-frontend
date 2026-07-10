@@ -1,44 +1,82 @@
+declare global {
+  interface Window {
+    API_BASE?: string;
+  }
+}
+
+type Priority = "High" | "Medium" | "Low";
+
+interface OtherIssue {
+  category: string;
+  priority: Priority;
+}
+
+interface RouteResponse {
+  category: string;
+  priority: Priority;
+  assigned_team: string;
+  reasoning: string;
+  other_issues?: OtherIssue[];
+  confidence?: string;
+}
+
+interface ErrorResponse {
+  detail?: string;
+}
+
+interface SampleTicket {
+  text: string;
+}
+
 // Backend origin. Override at runtime via `window.API_BASE = "https://your-api"`
 // in a small inline <script> before app.js, or edit the default below.
 const API_BASE = window.API_BASE || "http://localhost:8000";
 
-const els = {
-  textarea: document.getElementById("ticketText"),
-  charCount: document.getElementById("charCount"),
-  routeBtn: document.getElementById("routeBtn"),
-  clearBtn: document.getElementById("clearBtn"),
-  sampleSelect: document.getElementById("sampleSelect"),
-  errorMsg: document.getElementById("errorMsg"),
-  emptyState: document.getElementById("emptyState"),
-  resultCard: document.getElementById("resultCard"),
-  apiDot: document.getElementById("apiDot"),
-  apiStatusText: document.getElementById("apiStatusText"),
-  rCategory: document.getElementById("rCategory"),
-  rPriority: document.getElementById("rPriority"),
-  rTeam: document.getElementById("rTeam"),
-  rConfidence: document.getElementById("rConfidence"),
-  priorityList: document.getElementById("priorityList"),
-  rReasoning: document.getElementById("rReasoning"),
-  rRaw: document.getElementById("rRaw"),
-};
-
-function setLoading(isLoading) {
-  els.routeBtn.disabled = isLoading;
-  els.routeBtn.querySelector(".spinner").hidden = !isLoading;
-  els.routeBtn.querySelector(".btn-label").textContent = isLoading ? "Routing…" : "Route ticket";
+function getEl<T extends HTMLElement>(id: string): T {
+  const el = document.getElementById(id);
+  if (!el) throw new Error(`Missing #${id} element`);
+  return el as T;
 }
 
-function showError(message) {
+const els = {
+  textarea: getEl<HTMLTextAreaElement>("ticketText"),
+  charCount: getEl<HTMLSpanElement>("charCount"),
+  routeBtn: getEl<HTMLButtonElement>("routeBtn"),
+  clearBtn: getEl<HTMLButtonElement>("clearBtn"),
+  sampleSelect: getEl<HTMLSelectElement>("sampleSelect"),
+  errorMsg: getEl<HTMLParagraphElement>("errorMsg"),
+  emptyState: getEl<HTMLDivElement>("emptyState"),
+  resultCard: getEl<HTMLDivElement>("resultCard"),
+  apiDot: getEl<HTMLSpanElement>("apiDot"),
+  apiStatusText: getEl<HTMLSpanElement>("apiStatusText"),
+  rCategory: getEl<HTMLSpanElement>("rCategory"),
+  rPriority: getEl<HTMLSpanElement>("rPriority"),
+  rTeam: getEl<HTMLSpanElement>("rTeam"),
+  rConfidence: getEl<HTMLSpanElement>("rConfidence"),
+  priorityList: getEl<HTMLOListElement>("priorityList"),
+  rReasoning: getEl<HTMLParagraphElement>("rReasoning"),
+  rRaw: getEl<HTMLPreElement>("rRaw"),
+};
+
+function setLoading(isLoading: boolean): void {
+  els.routeBtn.disabled = isLoading;
+  getEl<HTMLSpanElement>("routeBtn").querySelector<HTMLSpanElement>(".spinner")!.hidden = !isLoading;
+  els.routeBtn.querySelector<HTMLSpanElement>(".btn-label")!.textContent = isLoading
+    ? "Routing…"
+    : "Route ticket";
+}
+
+function showError(message: string): void {
   els.errorMsg.textContent = message;
   els.errorMsg.hidden = false;
 }
 
-function clearError() {
+function clearError(): void {
   els.errorMsg.hidden = true;
   els.errorMsg.textContent = "";
 }
 
-function priorityClass(priority) {
+function priorityClass(priority: string | undefined): string {
   const key = (priority || "").toLowerCase();
   if (key === "high") return "priority-high";
   if (key === "medium") return "priority-medium";
@@ -46,7 +84,7 @@ function priorityClass(priority) {
   return "";
 }
 
-function buildOtherIssueItem(issue, rank) {
+function buildOtherIssueItem(issue: OtherIssue, rank: number): HTMLLIElement {
   const li = document.createElement("li");
   li.className = "priority-item";
 
@@ -78,7 +116,7 @@ function buildOtherIssueItem(issue, rank) {
   return li;
 }
 
-function renderResult(data) {
+function renderResult(data: RouteResponse): void {
   els.emptyState.hidden = true;
   els.resultCard.hidden = false;
 
@@ -88,7 +126,9 @@ function renderResult(data) {
   els.rTeam.textContent = data.assigned_team;
   els.rConfidence.textContent = data.confidence || "—";
 
-  els.priorityList.querySelectorAll(".priority-item:not(.priority-item-main)").forEach((el) => el.remove());
+  els.priorityList
+    .querySelectorAll(".priority-item:not(.priority-item-main)")
+    .forEach((el) => el.remove());
   (data.other_issues || []).forEach((issue, i) => {
     els.priorityList.appendChild(buildOtherIssueItem(issue, i + 2));
   });
@@ -97,7 +137,7 @@ function renderResult(data) {
   els.rRaw.textContent = JSON.stringify(data, null, 2);
 }
 
-async function routeTicket() {
+async function routeTicket(): Promise<void> {
   const message = els.textarea.value;
   clearError();
 
@@ -114,7 +154,7 @@ async function routeTicket() {
       body: JSON.stringify({ message }),
     });
 
-    let body;
+    let body: RouteResponse | ErrorResponse | null;
     try {
       body = await res.json();
     } catch {
@@ -122,24 +162,24 @@ async function routeTicket() {
     }
 
     if (!res.ok) {
-      const detail = body && body.detail ? body.detail : `Request failed (HTTP ${res.status}).`;
+      const detail = body && "detail" in body && body.detail ? body.detail : `Request failed (HTTP ${res.status}).`;
       showError(detail);
       return;
     }
 
-    renderResult(body);
-  } catch (err) {
+    renderResult(body as RouteResponse);
+  } catch {
     showError("Could not reach the API. Is the server running?");
   } finally {
     setLoading(false);
   }
 }
 
-function updateCharCount() {
+function updateCharCount(): void {
   els.charCount.textContent = `${els.textarea.value.length} / 8000`;
 }
 
-async function checkHealth() {
+async function checkHealth(): Promise<void> {
   try {
     const res = await fetch(`${API_BASE}/health`);
     if (res.ok) {
@@ -154,14 +194,14 @@ async function checkHealth() {
   }
 }
 
-async function loadSamples() {
+async function loadSamples(): Promise<void> {
   try {
     const res = await fetch(`${API_BASE}/data/sample_tickets.json`);
     if (!res.ok) return;
-    const samples = await res.json();
+    const samples: SampleTicket[] = await res.json();
     samples
       .filter((s) => s.text && s.text.trim())
-      .forEach((s, i) => {
+      .forEach((s) => {
         const opt = document.createElement("option");
         opt.value = s.text;
         opt.textContent = s.text.length > 60 ? s.text.slice(0, 57) + "…" : s.text;
@@ -201,3 +241,5 @@ els.sampleSelect.addEventListener("change", () => {
 updateCharCount();
 checkHealth();
 loadSamples();
+
+export {};
