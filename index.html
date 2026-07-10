@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Smart Ticket Router</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="page">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark">◆</span>
+        <span class="brand-name">Smart Ticket Router</span>
+      </div>
+      <div class="status" id="apiStatus">
+        <span class="dot" id="apiDot"></span>
+        <span id="apiStatusText">Checking API…</span>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="panel input-panel">
+        <div class="panel-head">
+          <h1>Route a ticket</h1>
+          <p>Paste a raw support message and get an instant, validated routing decision.</p>
+        </div>
+
+        <label class="field-label" for="ticketText">Ticket message</label>
+        <textarea
+          id="ticketText"
+          placeholder="e.g. I was charged twice this month, please refund me now!"
+          maxlength="8000"
+          rows="9"
+        ></textarea>
+        <div class="field-foot">
+          <span id="charCount">0 / 8000</span>
+        </div>
+
+        <div class="actions">
+          <button id="routeBtn" class="btn btn-primary">
+            <span class="btn-label">Route ticket</span>
+            <span class="spinner" hidden></span>
+          </button>
+          <button id="clearBtn" class="btn btn-ghost" type="button">Clear</button>
+          <div class="sample-wrap">
+            <select id="sampleSelect">
+              <option value="">Try a sample…</option>
+            </select>
+          </div>
+        </div>
+
+        <p class="error" id="errorMsg" hidden></p>
+      </section>
+
+      <section class="panel result-panel">
+        <div class="panel-head">
+          <h2>Routing decision</h2>
+          <p>Category, priority, and team assignment, with reasoning.</p>
+        </div>
+
+        <div id="emptyState" class="empty-state">
+          <div class="empty-icon">🎫</div>
+          <p>No ticket routed yet. Submit a message to see the result here.</p>
+        </div>
+
+        <div id="resultCard" class="result-card" hidden>
+          <div class="result-grid">
+            <div class="result-item">
+              <span class="result-key">Category</span>
+              <span class="badge" id="rCategory">—</span>
+            </div>
+            <div class="result-item">
+              <span class="result-key">Priority</span>
+              <span class="badge" id="rPriority">—</span>
+            </div>
+            <div class="result-item">
+              <span class="result-key">Assigned team</span>
+              <span class="badge badge-neutral" id="rTeam">—</span>
+            </div>
+            <div class="result-item">
+              <span class="result-key">Confidence</span>
+              <span class="badge badge-neutral" id="rConfidence">—</span>
+            </div>
+          </div>
+
+          <div class="result-row" id="rSecondaryRow" hidden>
+            <span class="result-key">Secondary category</span>
+            <span class="badge badge-neutral" id="rSecondary">—</span>
+          </div>
+
+          <div class="reasoning-block">
+            <span class="result-key">Reasoning</span>
+            <p id="rReasoning">—</p>
+          </div>
+
+          <details class="raw-json">
+            <summary>Raw JSON response</summary>
+            <pre id="rRaw"></pre>
+          </details>
+        </div>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <span>POST&nbsp;<code>/route</code> · FastAPI + Pydantic</span>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
