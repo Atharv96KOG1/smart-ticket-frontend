@@ -17,9 +17,7 @@ const els = {
   rPriority: document.getElementById("rPriority"),
   rTeam: document.getElementById("rTeam"),
   rConfidence: document.getElementById("rConfidence"),
-  rSecondaryItem: document.getElementById("rSecondaryItem"),
-  rSecondary: document.getElementById("rSecondary"),
-  rSecondaryPriority: document.getElementById("rSecondaryPriority"),
+  priorityList: document.getElementById("priorityList"),
   rReasoning: document.getElementById("rReasoning"),
   rRaw: document.getElementById("rRaw"),
 };
@@ -48,6 +46,38 @@ function priorityClass(priority) {
   return "";
 }
 
+function buildOtherIssueItem(issue, rank) {
+  const li = document.createElement("li");
+  li.className = "priority-item";
+
+  const rankBadge = document.createElement("span");
+  rankBadge.className = "rank-badge";
+  rankBadge.textContent = String(rank);
+
+  const body = document.createElement("div");
+  body.className = "priority-item-body";
+
+  const label = document.createElement("span");
+  label.className = "priority-item-label";
+  label.textContent = "Other priority";
+
+  const tags = document.createElement("div");
+  tags.className = "priority-item-tags";
+
+  const categoryBadge = document.createElement("span");
+  categoryBadge.className = "badge badge-neutral";
+  categoryBadge.textContent = issue.category;
+
+  const priorityBadge = document.createElement("span");
+  priorityBadge.className = "badge " + priorityClass(issue.priority);
+  priorityBadge.textContent = issue.priority;
+
+  tags.append(categoryBadge, priorityBadge);
+  body.append(label, tags);
+  li.append(rankBadge, body);
+  return li;
+}
+
 function renderResult(data) {
   els.emptyState.hidden = true;
   els.resultCard.hidden = false;
@@ -58,14 +88,10 @@ function renderResult(data) {
   els.rTeam.textContent = data.assigned_team;
   els.rConfidence.textContent = data.confidence || "—";
 
-  if (data.secondary_category) {
-    els.rSecondaryItem.hidden = false;
-    els.rSecondary.textContent = data.secondary_category;
-    els.rSecondaryPriority.textContent = data.secondary_priority || "—";
-    els.rSecondaryPriority.className = "badge " + priorityClass(data.secondary_priority);
-  } else {
-    els.rSecondaryItem.hidden = true;
-  }
+  els.priorityList.querySelectorAll(".priority-item:not(.priority-item-main)").forEach((el) => el.remove());
+  (data.other_issues || []).forEach((issue, i) => {
+    els.priorityList.appendChild(buildOtherIssueItem(issue, i + 2));
+  });
 
   els.rReasoning.textContent = data.reasoning;
   els.rRaw.textContent = JSON.stringify(data, null, 2);
