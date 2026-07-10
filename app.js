@@ -17,8 +17,9 @@ const els = {
   rPriority: document.getElementById("rPriority"),
   rTeam: document.getElementById("rTeam"),
   rConfidence: document.getElementById("rConfidence"),
-  rSecondaryRow: document.getElementById("rSecondaryRow"),
+  rSecondaryItem: document.getElementById("rSecondaryItem"),
   rSecondary: document.getElementById("rSecondary"),
+  rSecondaryPriority: document.getElementById("rSecondaryPriority"),
   rReasoning: document.getElementById("rReasoning"),
   rRaw: document.getElementById("rRaw"),
 };
@@ -58,10 +59,12 @@ function renderResult(data) {
   els.rConfidence.textContent = data.confidence || "—";
 
   if (data.secondary_category) {
-    els.rSecondaryRow.hidden = false;
+    els.rSecondaryItem.hidden = false;
     els.rSecondary.textContent = data.secondary_category;
+    els.rSecondaryPriority.textContent = data.secondary_priority || "—";
+    els.rSecondaryPriority.className = "badge " + priorityClass(data.secondary_priority);
   } else {
-    els.rSecondaryRow.hidden = true;
+    els.rSecondaryItem.hidden = true;
   }
 
   els.rReasoning.textContent = data.reasoning;

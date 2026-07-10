@@ -65,15 +65,31 @@
         </div>
 
         <div id="resultCard" class="result-card" hidden>
+          <span class="result-key">Priorities, ranked</span>
+          <ol class="priority-list" id="priorityList">
+            <li class="priority-item priority-item-main">
+              <span class="rank-badge">1</span>
+              <div class="priority-item-body">
+                <span class="priority-item-label">Main priority</span>
+                <div class="priority-item-tags">
+                  <span class="badge" id="rCategory">—</span>
+                  <span class="badge" id="rPriority">—</span>
+                </div>
+              </div>
+            </li>
+            <li class="priority-item" id="rSecondaryItem" hidden>
+              <span class="rank-badge">2</span>
+              <div class="priority-item-body">
+                <span class="priority-item-label">Other priority</span>
+                <div class="priority-item-tags">
+                  <span class="badge badge-neutral" id="rSecondary">—</span>
+                  <span class="badge" id="rSecondaryPriority">—</span>
+                </div>
+              </div>
+            </li>
+          </ol>
+
           <div class="result-grid">
-            <div class="result-item">
-              <span class="result-key">Category</span>
-              <span class="badge" id="rCategory">—</span>
-            </div>
-            <div class="result-item">
-              <span class="result-key">Priority</span>
-              <span class="badge" id="rPriority">—</span>
-            </div>
             <div class="result-item">
               <span class="result-key">Assigned team</span>
               <span class="badge badge-neutral" id="rTeam">—</span>
@@ -82,11 +98,6 @@
               <span class="result-key">Confidence</span>
               <span class="badge badge-neutral" id="rConfidence">—</span>
             </div>
-          </div>
-
-          <div class="result-row" id="rSecondaryRow" hidden>
-            <span class="result-key">Secondary category</span>
-            <span class="badge badge-neutral" id="rSecondary">—</span>
           </div>
 
           <div class="reasoning-block">
