@@ -5,19 +5,21 @@ declare global {
 }
 
 type Priority = "High" | "Medium" | "Low";
+type Confidence = "High" | "Medium" | "Low";
+type Theme = "dark" | "light";
 
-interface OtherIssue {
-  category: string;
-  priority: Priority;
-}
-
-interface RouteResponse {
+interface Issue {
+  id: number;
   category: string;
   priority: Priority;
   assigned_team: string;
   reasoning: string;
-  other_issues?: OtherIssue[];
-  confidence?: string;
+  confidence?: Confidence;
+}
+
+interface RouteResponse {
+  issues: Issue[];
+  processing_time_ms: number;
 }
 
 interface ErrorResponse {
@@ -31,6 +33,7 @@ interface SampleTicket {
 // Backend origin. Override at runtime via `window.API_BASE = "https://your-api"`
 // in a small inline <script> before app.js, or edit the default below.
 const API_BASE = window.API_BASE || "http://localhost:8000";
+const THEME_KEY = "stk-theme";
 
 function getEl<T extends HTMLElement>(id: string): T {
   const el = document.getElementById(id);
@@ -46,29 +49,43 @@ const els = {
   sampleSelect: getEl<HTMLSelectElement>("sampleSelect"),
   errorMsg: getEl<HTMLParagraphElement>("errorMsg"),
   emptyState: getEl<HTMLDivElement>("emptyState"),
+  loadingState: getEl<HTMLDivElement>("loadingState"),
   resultCard: getEl<HTMLDivElement>("resultCard"),
   apiDot: getEl<HTMLSpanElement>("apiDot"),
   apiStatusText: getEl<HTMLSpanElement>("apiStatusText"),
-  rCategory: getEl<HTMLSpanElement>("rCategory"),
-  rPriority: getEl<HTMLSpanElement>("rPriority"),
-  rTeam: getEl<HTMLSpanElement>("rTeam"),
-  rConfidence: getEl<HTMLSpanElement>("rConfidence"),
-  priorityList: getEl<HTMLOListElement>("priorityList"),
-  rReasoning: getEl<HTMLParagraphElement>("rReasoning"),
+  themeToggle: getEl<HTMLButtonElement>("themeToggle"),
+  issueCountChip: getEl<HTMLSpanElement>("issueCountChip"),
+  timeChip: getEl<HTMLSpanElement>("timeChip"),
+  issuesList: getEl<HTMLOListElement>("issuesList"),
+  rawToggle: getEl<HTMLButtonElement>("rawToggle"),
+  rawJsonBody: getEl<HTMLDivElement>("rawJsonBody"),
+  copyBtn: getEl<HTMLButtonElement>("copyBtn"),
   rRaw: getEl<HTMLPreElement>("rRaw"),
 };
 
 function setLoading(isLoading: boolean): void {
   els.routeBtn.disabled = isLoading;
-  getEl<HTMLSpanElement>("routeBtn").querySelector<HTMLSpanElement>(".spinner")!.hidden = !isLoading;
+  els.routeBtn.querySelector<HTMLSpanElement>(".spinner")!.hidden = !isLoading;
   els.routeBtn.querySelector<HTMLSpanElement>(".btn-label")!.textContent = isLoading
     ? "Routing…"
     : "Route ticket";
+
+  if (isLoading) {
+    els.emptyState.hidden = true;
+    els.resultCard.hidden = true;
+    els.loadingState.hidden = false;
+  } else {
+    els.loadingState.hidden = true;
+  }
 }
 
 function showError(message: string): void {
   els.errorMsg.textContent = message;
   els.errorMsg.hidden = false;
+  els.errorMsg.classList.remove("shake");
+  // Force reflow so the animation replays on repeated errors.
+  void els.errorMsg.offsetWidth;
+  els.errorMsg.classList.add("shake");
 }
 
 function clearError(): void {
@@ -84,56 +101,78 @@ function priorityClass(priority: string | undefined): string {
   return "";
 }
 
-function buildOtherIssueItem(issue: OtherIssue, rank: number): HTMLLIElement {
+function buildIssueCard(issue: Issue, index: number, total: number): HTMLLIElement {
   const li = document.createElement("li");
-  li.className = "priority-item";
+  li.className = "issue-card" + (index === 0 ? " issue-card-primary" : "");
+  li.style.animationDelay = `${index * 70}ms`;
 
-  const rankBadge = document.createElement("span");
-  rankBadge.className = "rank-badge";
-  rankBadge.textContent = String(rank);
+  const head = document.createElement("div");
+  head.className = "issue-card-head";
 
-  const body = document.createElement("div");
-  body.className = "priority-item-body";
+  const rank = document.createElement("span");
+  rank.className = "rank-badge";
+  rank.textContent = String(index + 1);
 
-  const label = document.createElement("span");
-  label.className = "priority-item-label";
-  label.textContent = "Other priority";
+  const tag = document.createElement("span");
+  tag.className = "issue-card-tag";
+  tag.textContent = index === 0 ? "Primary issue" : `Other issue${total > 2 ? ` #${index + 1}` : ""}`;
 
-  const tags = document.createElement("div");
-  tags.className = "priority-item-tags";
+  head.append(rank, tag);
+
+  const badges = document.createElement("div");
+  badges.className = "issue-card-badges";
 
   const categoryBadge = document.createElement("span");
-  categoryBadge.className = "badge badge-neutral";
+  categoryBadge.className = "badge";
   categoryBadge.textContent = issue.category;
 
   const priorityBadge = document.createElement("span");
   priorityBadge.className = "badge " + priorityClass(issue.priority);
   priorityBadge.textContent = issue.priority;
 
-  tags.append(categoryBadge, priorityBadge);
-  body.append(label, tags);
-  li.append(rankBadge, body);
+  const teamBadge = document.createElement("span");
+  teamBadge.className = "badge badge-neutral";
+  teamBadge.textContent = issue.assigned_team;
+
+  badges.append(categoryBadge, priorityBadge, teamBadge);
+
+  if (issue.confidence) {
+    const confidenceBadge = document.createElement("span");
+    confidenceBadge.className = "badge badge-neutral badge-confidence";
+    confidenceBadge.textContent = `Confidence: ${issue.confidence}`;
+    badges.append(confidenceBadge);
+  }
+
+  const reasoning = document.createElement("p");
+  reasoning.className = "issue-card-reasoning";
+  reasoning.textContent = issue.reasoning;
+
+  li.append(head, badges, reasoning);
   return li;
+}
+
+function countUp(el: HTMLElement, target: number, prefix: string, suffix: string, durationMs = 500): void {
+  const start = performance.now();
+  const step = (now: number) => {
+    const progress = Math.min((now - start) / durationMs, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    el.textContent = `${prefix}${Math.round(target * eased)}${suffix}`;
+    if (progress < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
 }
 
 function renderResult(data: RouteResponse): void {
   els.emptyState.hidden = true;
+  els.loadingState.hidden = true;
   els.resultCard.hidden = false;
 
-  els.rCategory.textContent = data.category;
-  els.rPriority.textContent = data.priority;
-  els.rPriority.className = "badge " + priorityClass(data.priority);
-  els.rTeam.textContent = data.assigned_team;
-  els.rConfidence.textContent = data.confidence || "—";
+  const issues = data.issues || [];
+  els.issueCountChip.textContent = `${issues.length} issue${issues.length === 1 ? "" : "s"} detected`;
+  countUp(els.timeChip, data.processing_time_ms ?? 0, "⚡ ", "ms");
 
-  els.priorityList
-    .querySelectorAll(".priority-item:not(.priority-item-main)")
-    .forEach((el) => el.remove());
-  (data.other_issues || []).forEach((issue, i) => {
-    els.priorityList.appendChild(buildOtherIssueItem(issue, i + 2));
-  });
+  els.issuesList.replaceChildren(...issues.map((issue, i) => buildIssueCard(issue, i, issues.length)));
 
-  els.rReasoning.textContent = data.reasoning;
   els.rRaw.textContent = JSON.stringify(data, null, 2);
 }
 
@@ -176,7 +215,9 @@ async function routeTicket(): Promise<void> {
 }
 
 function updateCharCount(): void {
-  els.charCount.textContent = `${els.textarea.value.length} / 8000`;
+  const len = els.textarea.value.length;
+  els.charCount.textContent = `${len} / 8000`;
+  els.charCount.classList.toggle("char-count-warn", len > 7000);
 }
 
 async function checkHealth(): Promise<void> {
@@ -212,6 +253,46 @@ async function loadSamples(): Promise<void> {
   }
 }
 
+function applyTheme(theme: Theme): void {
+  document.documentElement.dataset.theme = theme;
+  els.themeToggle.setAttribute("aria-pressed", String(theme === "light"));
+  els.themeToggle.setAttribute("aria-label", theme === "dark" ? "Switch to light theme" : "Switch to dark theme");
+}
+
+function initTheme(): void {
+  const stored = localStorage.getItem(THEME_KEY) as Theme | null;
+  const systemDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  applyTheme(stored ?? (systemDark ? "dark" : "light"));
+}
+
+function toggleTheme(): void {
+  const current = document.documentElement.dataset.theme === "light" ? "light" : "dark";
+  const next: Theme = current === "dark" ? "light" : "dark";
+  applyTheme(next);
+  localStorage.setItem(THEME_KEY, next);
+}
+
+async function copyRawJson(): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(els.rRaw.textContent || "");
+    els.copyBtn.textContent = "Copied ✓";
+    els.copyBtn.classList.add("btn-copied");
+  } catch {
+    els.copyBtn.textContent = "Copy failed";
+  } finally {
+    setTimeout(() => {
+      els.copyBtn.textContent = "Copy";
+      els.copyBtn.classList.remove("btn-copied");
+    }, 1500);
+  }
+}
+
+function toggleRawJson(): void {
+  const expanded = els.rawToggle.getAttribute("aria-expanded") === "true";
+  els.rawToggle.setAttribute("aria-expanded", String(!expanded));
+  els.rawJsonBody.hidden = expanded;
+}
+
 els.routeBtn.addEventListener("click", routeTicket);
 
 els.textarea.addEventListener("keydown", (e) => {
@@ -238,6 +319,11 @@ els.sampleSelect.addEventListener("change", () => {
   }
 });
 
+els.themeToggle.addEventListener("click", toggleTheme);
+els.rawToggle.addEventListener("click", toggleRawJson);
+els.copyBtn.addEventListener("click", copyRawJson);
+
+initTheme();
 updateCharCount();
 checkHealth();
 loadSamples();

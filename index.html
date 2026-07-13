@@ -13,9 +13,15 @@
         <span class="brand-mark">◆</span>
         <span class="brand-name">Smart Ticket Router</span>
       </div>
-      <div class="status" id="apiStatus">
-        <span class="dot" id="apiDot"></span>
-        <span id="apiStatusText">Checking API…</span>
+      <div class="topbar-right">
+        <div class="status" id="apiStatus">
+          <span class="dot" id="apiDot"></span>
+          <span id="apiStatusText">Checking API…</span>
+        </div>
+        <button id="themeToggle" class="theme-toggle" type="button" aria-label="Switch to light theme" aria-pressed="false">
+          <span class="theme-icon theme-icon-sun" aria-hidden="true">☀️</span>
+          <span class="theme-icon theme-icon-moon" aria-hidden="true">🌙</span>
+        </button>
       </div>
     </header>
 
@@ -34,6 +40,7 @@
           rows="9"
         ></textarea>
         <div class="field-foot">
+          <span class="hint">⌘/Ctrl + Enter to submit</span>
           <span id="charCount">0 / 8000</span>
         </div>
 
@@ -50,13 +57,13 @@
           </div>
         </div>
 
-        <p class="error" id="errorMsg" hidden></p>
+        <p class="error" id="errorMsg" role="alert" hidden></p>
       </section>
 
       <section class="panel result-panel">
         <div class="panel-head">
           <h2>Routing decision</h2>
-          <p>Category, priority, and team assignment, with reasoning.</p>
+          <p>Every distinct issue, fully classified — category, priority, team, and reasoning.</p>
         </div>
 
         <div id="emptyState" class="empty-state">
@@ -64,42 +71,37 @@
           <p>No ticket routed yet. Submit a message to see the result here.</p>
         </div>
 
+        <div id="loadingState" class="loading-state" hidden aria-hidden="true">
+          <div class="skeleton-stats">
+            <span class="skeleton skeleton-chip"></span>
+            <span class="skeleton skeleton-chip"></span>
+          </div>
+          <div class="skeleton-card"></div>
+          <div class="skeleton-card skeleton-card-sm"></div>
+        </div>
+
         <div id="resultCard" class="result-card" hidden>
-          <span class="result-key">Priorities, ranked</span>
-          <ol class="priority-list" id="priorityList">
-            <li class="priority-item priority-item-main">
-              <span class="rank-badge">1</span>
-              <div class="priority-item-body">
-                <span class="priority-item-label">Main priority</span>
-                <div class="priority-item-tags">
-                  <span class="badge" id="rCategory">—</span>
-                  <span class="badge" id="rPriority">—</span>
-                </div>
+          <div class="stats-row">
+            <span class="stat-chip" id="issueCountChip">—</span>
+            <span class="stat-chip stat-chip-time" id="timeChip">—</span>
+          </div>
+
+          <ol class="issues-list" id="issuesList"></ol>
+
+          <div class="raw-json">
+            <button class="raw-json-toggle" id="rawToggle" type="button" aria-expanded="false" aria-controls="rawJsonBody">
+              <span>Raw JSON response</span>
+              <svg class="chevron" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+                <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+            <div class="raw-json-body" id="rawJsonBody" hidden>
+              <div class="raw-json-actions">
+                <button class="btn btn-ghost btn-small" id="copyBtn" type="button">Copy</button>
               </div>
-            </li>
-            <!-- additional <li> items for other_issues are appended here by app.js -->
-          </ol>
-
-          <div class="result-grid">
-            <div class="result-item">
-              <span class="result-key">Assigned team</span>
-              <span class="badge badge-neutral" id="rTeam">—</span>
-            </div>
-            <div class="result-item">
-              <span class="result-key">Confidence</span>
-              <span class="badge badge-neutral" id="rConfidence">—</span>
+              <pre id="rRaw"></pre>
             </div>
           </div>
-
-          <div class="reasoning-block">
-            <span class="result-key">Reasoning</span>
-            <p id="rReasoning">—</p>
-          </div>
-
-          <details class="raw-json">
-            <summary>Raw JSON response</summary>
-            <pre id="rRaw"></pre>
-          </details>
         </div>
       </section>
     </main>
