@@ -4,13 +4,36 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Smart Ticket Router</title>
+<script>
+  // Set the theme before first paint to avoid a flash of the wrong theme on
+  // reload. Keep the localStorage key in sync with THEME_KEY in src/app.ts.
+  (function () {
+    try {
+      var stored = localStorage.getItem("stk-theme");
+      var theme = stored || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      document.documentElement.dataset.theme = theme;
+    } catch (e) {}
+  })();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Google+Sans+Text:wght@400;500&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <div class="page">
     <header class="topbar">
       <div class="brand">
-        <span class="brand-mark">◆</span>
+        <svg class="brand-mark" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+          <defs>
+            <linearGradient id="sparkGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#4285F4" />
+              <stop offset="50%" stop-color="#9B72CB" />
+              <stop offset="100%" stop-color="#D96570" />
+            </linearGradient>
+          </defs>
+          <path fill="url(#sparkGradient)" d="M12 0 L14.5 9.5 L24 12 L14.5 14.5 L12 24 L9.5 14.5 L0 12 L9.5 9.5 Z" />
+        </svg>
         <span class="brand-name">Smart Ticket Router</span>
       </div>
       <div class="topbar-right">
