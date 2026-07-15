@@ -3,10 +3,12 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 <title>Smart Ticket Router</title>
 <script>
   // Set the theme before first paint to avoid a flash of the wrong theme on
-  // reload. Keep the localStorage key in sync with THEME_KEY in src/app.ts.
+  // reload. Keep the localStorage key in sync with THEME_KEY in
+  // src/constants/storage.ts.
   (function () {
     try {
       var stored = localStorage.getItem("stk-theme");
@@ -18,122 +20,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&family=Google+Sans+Text:wght@400;500&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div class="page">
-    <header class="topbar">
-      <div class="brand">
-        <svg class="brand-mark" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-          <defs>
-            <linearGradient id="sparkGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="#4285F4" />
-              <stop offset="50%" stop-color="#9B72CB" />
-              <stop offset="100%" stop-color="#D96570" />
-            </linearGradient>
-          </defs>
-          <path fill="url(#sparkGradient)" d="M12 0 L14.5 9.5 L24 12 L14.5 14.5 L12 24 L9.5 14.5 L0 12 L9.5 9.5 Z" />
-        </svg>
-        <span class="brand-name">Smart Ticket Router</span>
-      </div>
-      <div class="topbar-right">
-        <div class="status" id="apiStatus">
-          <span class="dot" id="apiDot"></span>
-          <span id="apiStatusText">Checking API…</span>
-        </div>
-        <button id="themeToggle" class="theme-toggle" type="button" aria-label="Switch to light theme" aria-pressed="false">
-          <span class="theme-icon theme-icon-sun" aria-hidden="true">☀️</span>
-          <span class="theme-icon theme-icon-moon" aria-hidden="true">🌙</span>
-        </button>
-      </div>
-    </header>
-
-    <main class="layout">
-      <section class="panel input-panel">
-        <div class="panel-head">
-          <h1>Route a ticket</h1>
-          <p>Paste a raw support message and get an instant, validated routing decision.</p>
-        </div>
-
-        <label class="field-label" for="ticketText">Ticket message</label>
-        <textarea
-          id="ticketText"
-          placeholder="e.g. I was charged twice this month, please refund me now!"
-          maxlength="8000"
-          rows="9"
-        ></textarea>
-        <div class="field-foot">
-          <span class="hint">⌘/Ctrl + Enter to submit</span>
-          <span id="charCount">0 / 8000</span>
-        </div>
-
-        <div class="actions">
-          <button id="routeBtn" class="btn btn-primary">
-            <span class="btn-label">Route ticket</span>
-            <span class="spinner" hidden></span>
-          </button>
-          <button id="clearBtn" class="btn btn-ghost" type="button">Clear</button>
-          <div class="sample-wrap">
-            <select id="sampleSelect">
-              <option value="">Try a sample…</option>
-            </select>
-          </div>
-        </div>
-
-        <p class="error" id="errorMsg" role="alert" hidden></p>
-      </section>
-
-      <section class="panel result-panel">
-        <div class="panel-head">
-          <h2>Routing decision</h2>
-          <p>Every distinct issue, fully classified — category, priority, team, and reasoning.</p>
-        </div>
-
-        <div id="emptyState" class="empty-state">
-          <div class="empty-icon">🎫</div>
-          <p>No ticket routed yet. Submit a message to see the result here.</p>
-        </div>
-
-        <div id="loadingState" class="loading-state" hidden aria-hidden="true">
-          <div class="skeleton-stats">
-            <span class="skeleton skeleton-chip"></span>
-            <span class="skeleton skeleton-chip"></span>
-          </div>
-          <div class="skeleton-card"></div>
-          <div class="skeleton-card skeleton-card-sm"></div>
-        </div>
-
-        <div id="resultCard" class="result-card" hidden>
-          <div class="stats-row">
-            <span class="stat-chip" id="issueCountChip">—</span>
-            <span class="stat-chip stat-chip-time" id="timeChip">—</span>
-          </div>
-
-          <ol class="issues-list" id="issuesList"></ol>
-
-          <div class="raw-json">
-            <button class="raw-json-toggle" id="rawToggle" type="button" aria-expanded="false" aria-controls="rawJsonBody">
-              <span>Raw JSON response</span>
-              <svg class="chevron" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
-                <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </button>
-            <div class="raw-json-body" id="rawJsonBody" hidden>
-              <div class="raw-json-actions">
-                <button class="btn btn-ghost btn-small" id="copyBtn" type="button">Copy</button>
-              </div>
-              <pre id="rRaw"></pre>
-            </div>
-          </div>
-        </div>
-      </section>
-    </main>
-
-    <footer class="foot">
-      <span>POST&nbsp;<code>/route</code> · FastAPI + Pydantic</span>
-    </footer>
-  </div>
-
-  <script type="module" src="dist/app.js"></script>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
 </body>
 </html>

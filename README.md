@@ -1,35 +1,50 @@
 # Smart Ticket Router — Frontend
 
-Static single-page UI (TypeScript, no bundler) for the
+React + TypeScript + Vite single-page UI for the
 [Smart Ticket Router API](../backend). Submit a raw support message and see
 its routing decision — category, priority, assigned team, reasoning,
 other issues (ranked), and confidence.
 
-## Build
+## Structure
+
+One component/hook/utility per file:
+
+```
+src/
+  main.tsx, App.tsx, styles.css
+  types/          request/response, history, and theme types
+  constants/      API base URL, localStorage keys
+  utils/          formatting, clipboard, priority-class helpers
+  hooks/          useTheme, useApiHealth, useSamples, useTicketHistory,
+                  useCountUp, useTicketRouter
+  components/
+    TopBar/       theme toggle, API status indicator, history button
+    InputPanel/   ticket textarea, sample selector, error banner
+    ResultPanel/  result card, loading/empty states, raw JSON viewer
+    HistoryDrawer/
+    Footer.tsx
+```
+
+## Develop
 
 ```bash
 npm install
-npm run build     # compiles src/app.ts -> dist/app.js
-npm run watch     # or: recompile on change while developing
+npm run dev       # starts the Vite dev server (default http://localhost:5173)
 ```
 
-## Run it
+## Build
 
 ```bash
-npm run build
-npm run serve     # python3 -m http.server 5173
-# open http://localhost:5173
+npm run build     # tsc -b && vite build -> dist/
+npm run preview   # serve the production build locally
 ```
 
-Any static file server works — it just needs to serve `index.html`,
-`styles.css`, and the compiled `dist/app.js`.
-
 By default the app calls the API at `http://localhost:8000`. To point at a
-different backend, set `window.API_BASE` before the module script loads:
+different backend, set `window.API_BASE` before the app loads (e.g. in
+`index.html`, before the module script tag):
 
 ```html
 <script>window.API_BASE = "https://your-api.example.com";</script>
-<script type="module" src="dist/app.js"></script>
 ```
 
 ## Backend requirement
