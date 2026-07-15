@@ -30,10 +30,19 @@ interface SampleTicket {
   text: string;
 }
 
+interface HistoryEntry {
+  id: string;
+  message: string;
+  timestamp: number;
+  result: RouteResponse;
+}
+
 // Backend origin. Override at runtime via `window.API_BASE = "https://your-api"`
 // in a small inline <script> before app.js, or edit the default below.
 const API_BASE = window.API_BASE || "http://localhost:8000";
 const THEME_KEY = "stk-theme";
+const HISTORY_KEY = "stk-history";
+const HISTORY_LIMIT = 50;
 
 function getEl<T extends HTMLElement>(id: string): T {
   const el = document.getElementById(id);
@@ -61,6 +70,14 @@ const els = {
   rawJsonBody: getEl<HTMLDivElement>("rawJsonBody"),
   copyBtn: getEl<HTMLButtonElement>("copyBtn"),
   rRaw: getEl<HTMLPreElement>("rRaw"),
+  historyBtn: getEl<HTMLButtonElement>("historyBtn"),
+  historyCount: getEl<HTMLSpanElement>("historyCount"),
+  historyOverlay: getEl<HTMLDivElement>("historyOverlay"),
+  historyDrawer: getEl<HTMLElement>("historyDrawer"),
+  historyList: getEl<HTMLDivElement>("historyList"),
+  historyEmpty: getEl<HTMLDivElement>("historyEmpty"),
+  historyClearBtn: getEl<HTMLButtonElement>("historyClearBtn"),
+  historyCloseBtn: getEl<HTMLButtonElement>("historyCloseBtn"),
 };
 
 function setLoading(isLoading: boolean): void {
@@ -125,22 +142,28 @@ function buildIssueCard(issue: Issue, index: number, total: number): HTMLLIEleme
   const categoryBadge = document.createElement("span");
   categoryBadge.className = "badge";
   categoryBadge.textContent = issue.category;
+  badges.append(categoryBadge);
 
-  const priorityBadge = document.createElement("span");
-  priorityBadge.className = "badge " + priorityClass(issue.priority);
-  priorityBadge.textContent = issue.priority;
+  // Out of Scope is a fixed, meaningless-input classification (always Low /
+  // Tier-1 Support / High confidence) — those fields add noise, not signal,
+  // so only the category itself is shown.
+  if (issue.category !== "Out of Scope") {
+    const priorityBadge = document.createElement("span");
+    priorityBadge.className = "badge " + priorityClass(issue.priority);
+    priorityBadge.textContent = issue.priority;
 
-  const teamBadge = document.createElement("span");
-  teamBadge.className = "badge badge-neutral";
-  teamBadge.textContent = issue.assigned_team;
+    const teamBadge = document.createElement("span");
+    teamBadge.className = "badge badge-neutral";
+    teamBadge.textContent = issue.assigned_team;
 
-  badges.append(categoryBadge, priorityBadge, teamBadge);
+    badges.append(priorityBadge, teamBadge);
 
-  if (issue.confidence) {
-    const confidenceBadge = document.createElement("span");
-    confidenceBadge.className = "badge badge-neutral badge-confidence";
-    confidenceBadge.textContent = `Confidence: ${issue.confidence}`;
-    badges.append(confidenceBadge);
+    if (issue.confidence) {
+      const confidenceBadge = document.createElement("span");
+      confidenceBadge.className = "badge badge-neutral badge-confidence";
+      confidenceBadge.textContent = `Confidence: ${issue.confidence}`;
+      badges.append(confidenceBadge);
+    }
   }
 
   const reasoning = document.createElement("p");
@@ -207,6 +230,7 @@ async function routeTicket(): Promise<void> {
     }
 
     renderResult(body as RouteResponse);
+    addHistoryEntry(message, body as RouteResponse);
   } catch {
     showError("Could not reach the API. Is the server running?");
   } finally {
@@ -293,6 +317,120 @@ function toggleRawJson(): void {
   els.rawJsonBody.hidden = expanded;
 }
 
+function loadHistory(): HistoryEntry[] {
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY);
+    return raw ? (JSON.parse(raw) as HistoryEntry[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveHistory(entries: HistoryEntry[]): void {
+  try {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(entries.slice(0, HISTORY_LIMIT)));
+  } catch {
+    // storage full or unavailable (e.g. private browsing) — history just won't persist
+  }
+}
+
+function formatRelativeTime(timestamp: number): string {
+  const minutes = Math.round((Date.now() - timestamp) / 60000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.round(hours / 24)}d ago`;
+}
+
+function updateHistoryCount(count: number): void {
+  els.historyCount.textContent = String(count);
+  els.historyCount.hidden = count === 0;
+}
+
+function buildHistoryItem(entry: HistoryEntry): HTMLButtonElement {
+  const btn = document.createElement("button");
+  btn.className = "history-item";
+  btn.type = "button";
+
+  const top = document.createElement("div");
+  top.className = "history-item-top";
+
+  const time = document.createElement("span");
+  time.className = "history-item-time";
+  time.textContent = formatRelativeTime(entry.timestamp);
+  top.append(time);
+
+  const primary = entry.result.issues && entry.result.issues[0];
+  if (primary) {
+    const badge = document.createElement("span");
+    const isOutOfScope = primary.category === "Out of Scope";
+    badge.className = "badge " + (isOutOfScope ? "" : priorityClass(primary.priority));
+    badge.textContent = isOutOfScope ? primary.category : `${primary.category} · ${primary.priority}`;
+    top.append(badge);
+  }
+
+  const msg = document.createElement("p");
+  msg.className = "history-item-msg";
+  msg.textContent = entry.message;
+
+  btn.append(top, msg);
+  btn.addEventListener("click", () => {
+    els.textarea.value = entry.message;
+    updateCharCount();
+    clearError();
+    renderResult(entry.result);
+    closeHistory();
+  });
+  return btn;
+}
+
+function renderHistoryList(): void {
+  const entries = loadHistory();
+  els.historyList.replaceChildren(...entries.map(buildHistoryItem));
+  els.historyList.hidden = entries.length === 0;
+  els.historyEmpty.hidden = entries.length > 0;
+}
+
+function addHistoryEntry(message: string, result: RouteResponse): void {
+  const entries = loadHistory();
+  entries.unshift({
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    message,
+    timestamp: Date.now(),
+    result,
+  });
+  saveHistory(entries);
+  updateHistoryCount(entries.length);
+}
+
+function openHistory(): void {
+  renderHistoryList();
+  els.historyOverlay.hidden = false;
+  els.historyDrawer.hidden = false;
+  els.historyDrawer.setAttribute("aria-hidden", "false");
+  requestAnimationFrame(() => {
+    els.historyOverlay.classList.add("open");
+    els.historyDrawer.classList.add("open");
+  });
+}
+
+function closeHistory(): void {
+  els.historyOverlay.classList.remove("open");
+  els.historyDrawer.classList.remove("open");
+  els.historyDrawer.setAttribute("aria-hidden", "true");
+  setTimeout(() => {
+    els.historyOverlay.hidden = true;
+    els.historyDrawer.hidden = true;
+  }, 250);
+}
+
+function clearHistory(): void {
+  localStorage.removeItem(HISTORY_KEY);
+  updateHistoryCount(0);
+  renderHistoryList();
+}
+
 els.routeBtn.addEventListener("click", routeTicket);
 
 els.textarea.addEventListener("keydown", (e) => {
@@ -323,9 +461,20 @@ els.themeToggle.addEventListener("click", toggleTheme);
 els.rawToggle.addEventListener("click", toggleRawJson);
 els.copyBtn.addEventListener("click", copyRawJson);
 
+els.historyBtn.addEventListener("click", openHistory);
+els.historyCloseBtn.addEventListener("click", closeHistory);
+els.historyOverlay.addEventListener("click", closeHistory);
+els.historyClearBtn.addEventListener("click", clearHistory);
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && els.historyDrawer.classList.contains("open")) {
+    closeHistory();
+  }
+});
+
 initTheme();
 updateCharCount();
 checkHealth();
 loadSamples();
+updateHistoryCount(loadHistory().length);
 
 export {};
