@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Footer } from "./components/Footer";
+import { Footer } from "./components/Footer/Footer";
 import { HistoryDrawer } from "./components/HistoryDrawer/HistoryDrawer";
 import { InputPanel } from "./components/InputPanel/InputPanel";
 import { ResultPanel } from "./components/ResultPanel/ResultPanel";
